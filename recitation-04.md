@@ -1,7 +1,6 @@
 # CMPS 2200  Recitation 04
 
-**Name (Team Member 1):**_________________________  
-**Name (Team Member 2):**_________________________
+**Name (Team Member 1):**Rodrigo Rosas Guzman
 
 
 In this lab you will practice using the `map` and `reduce` functions. These functions are commonly used together in a `map-reduce` framework, used by Google and others to parallelize and scale common computations.
@@ -37,7 +36,8 @@ To use this function to count words, you'll need to implement your own `map_f` a
 4. Assume that a word `w` appears `n` times. What is the **work** and **span** of `word_count_reduce` for this word, assuming a parallel implementation of the `reduce` function?
 
 **Enter answer here**
-
+0(n) because it needs to add all n values.
+0(log n) is the span because we are performing the additions in parallel.
 
 5. Why are we going through all this trouble? Couldn't I just use this function to count words?
 
@@ -54,6 +54,7 @@ What is the problem that prevents us from easily parallelizing this solution?
 
 **Enter answer here**
 
+it uses a dictionary called counts, it cannot be updated simultaneously because it needs sicronization. The other design lets each processor create one key with its value attached. it then combines them.
 
 ## Part 2: Sentiment analysis
 

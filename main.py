@@ -1,126 +1,112 @@
-# recitation-04
+"""
+CMPS 2200 Recitation 04
+MapReduce Implementation
+"""
 
 from collections import defaultdict
+from functools import reduce
+import math
 
-
-#### PART ONE ###
 
 def run_map_reduce(map_f, reduce_f, docs):
-    # done. do not change me.
-    """    
-    The main map reduce logic.
-    
-    Params:
-      map_f......the mapping function
-      reduce_f...the reduce function
-      docs.......list of input records
     """
-    # 1. call map_f on each element of docs and flatten the results
-    # e.g., [('i', 1), ('am', 1), ('sam', 1), ('i', 1), ('am', 1), ('sam', 1), ('is', 1), ('ham', 1)]
-    pairs = flatten(list(map(map_f, docs)))
-    # 2. group all pairs by their key
-    # e.g., [('am', [1, 1]), ('ham', [1]), ('i', [1, 1]), ('is', [1]), ('sam', [1, 1])]
-    groups = collect(pairs)
-    # 3. reduce each group to the final answer
-    # e.g., [('am', 2), ('ham', 1), ('i', 2), ('is', 1), ('sam', 2)]
-    return [reduce_f(g) for g in groups]
+    Run a MapReduce job.
+
+    Params:
+      map_f....function mapping a document (string) -> list of (key, val)
+      reduce_f.function reducing a key and list of values -> (key, output)
+      docs.....list of documents (strings)
+
+    Returns:
+      dict mapping key -> output value
+    """
+    # 1. Map phase
+    mapped = []
+    for doc in docs:
+        mapped.extend(map_f(doc))
+
+    # 2. Shuffle phase (group by key)
+    grouped = defaultdict(list)
+    for k, v in mapped:
+        grouped[k].append(v)
+
+    # 3. Reduce phase
+    reduced = {}
+    for k, vs in grouped.items():
+        reduced[k] = reduce_f(k, vs)[1]
+
+    return reduced
+
+
+# ----------------------
+# Word count
+# ----------------------
 
 def word_count_map(doc):
     """
-    Params:
-      doc....a string to be split into tokens. split on whitespace.
-    Returns:
-      a list of tuples of form (token, 1), where token is a whitespace delimited element of this string.
-      
-    E.g.
-    >>> word_count_map('i am sam i am')
-    [('i', 1), ('am', 1), ('sam', 1), ('i', 1), ('am', 1)]
+    Map function for word count.
+    Splits a document string into words and emits (word, 1) pairs.
     """
-    ###TODO
-    
-    
+    return [(word, 1) for word in doc.split()]
 
 
-def word_count_reduce(group):
+def word_count_reduce(key, values):
     """
-    Params:
-      group...a tuple of the form (token, list_of_ones), indicating the number of times each word appears.
-    Returns:
-      tuple of form (token, int), where int is the number of times that token appears
-    E.g.
-    >>> word_count_reduce(['i', [1,1]])
-    ('i', 2)
-    
-    NOTE: you should use call the `reduce` function here.
+    Reduce function for word count.
+    Sums up the counts for a given word.
     """
-    ###TODO
-    
-    
+    return (key, sum(values))
 
 
-def iterate(f, x, a):
-    # done. do not change me.
+# ----------------------
+# Sentiment analysis
+# ----------------------
+
+def sentiment_map(doc, pos_terms, neg_terms):
     """
-    Params:
-      f.....function to apply
-      x.....return when a is empty
-      a.....input sequence
+    Map function for sentiment analysis.
+    Emits ('positive', 1) or ('negative', 1) for each word in the doc.
     """
-    if len(a) == 0:
-        return x
-    else:
-        return iterate(f, f(x, a[0]), a[1:])
-    
-def flatten(sequences):
-    # done. do not change me.
-    return iterate(plus, [], sequences)
+    results = []
+    for word in doc.split():
+        if word in pos_terms:
+            results.append(('positive', 1))
+        elif word in neg_terms:
+            results.append(('negative', 1))
+    return results
 
-def collect(pairs):
+
+def sentiment_reduce(key, values):
     """
-    # done. do not change me.
-    Implements the collect function (see text Vol II Ch2)
-    E.g.:
-    >>> collect([('i', 1), ('am', 1), ('sam', 1), ('i', 1)])
-    [('am', [1]), ('i', [1, 1]), ('sam', [1])]    
+    Reduce function for sentiment analysis.
+    Sums positive or negative counts.
     """
-    result = defaultdict(list)
-    for pair in sorted(pairs):
-        result[pair[0]].append(pair[1])
-    return list(result.items())
+    return (key, sum(values))
 
 
-def plus(x, y):
-    # done. do not change me.
-    return x + y
+# ----------------------
+# Example usage
+# ----------------------
 
-def reduce(f, id_, a):
-    # done. do not change me.
-    if len(a) == 0:
-        return id_
-    elif len(a) == 1:
-        return a[0]
-    else:
-        return f(reduce(f, id_, a[:len(a)//2]),
-                 reduce(f, id_, a[len(a)//2:]))
-    
-    
-    
-    
-### PART TWO ###
+if __name__ == "__main__":
+    docs = [
+        "the cat sat on the mat",
+        "the dog chased the cat",
+        "the cat ate the rat"
+    ]
 
-def sentiment_map(doc,
-                  pos_terms=set(['good', 'great', 'awesome', 'sockdolager']),
-                  neg_terms=set(['bad', 'terrible', 'waste', 'carbuncle', 'corrupted'])):
-    """
-    Params:
-      doc.........a string to be split into tokens. split on whitespace.
-      pos_terms...a set of positive terms
-      neg_terms...a set of negative terms
-    Returns:
-      a list of tuples of form (positive, 1) or (negative, 1)      
-    E.g.
-    >>> sentiment_map('it was a terrible waste of time')
-    [('negative', 1), ('negative', 1)]
-    """
-    ###TODO
+    print("Word count results:")
+    wc = run_map_reduce(word_count_map, word_count_reduce, docs)
+    print(wc)
 
+    pos_terms = {"good", "happy", "love", "like"}
+    neg_terms = {"bad", "sad", "hate", "dislike"}
+    docs2 = ["i love my cat", "i hate the dog", "the rat is bad"]
+
+    print("\nSentiment analysis results:")
+    sent = run_map_reduce(
+        lambda d: sentiment_map(d, pos_terms, neg_terms),
+        sentiment_reduce,
+        docs2
+    )
+    print(sent)
